@@ -138,20 +138,47 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="fan-speed-control" class="form-label">
+                            Fan Speed Control (Virtual Fan)
+                        </label>
+                        <select class="form-select" id="fan-speed-control">
+                            <option value="none">None</option>
+                            <option value="fan">Fan Device</option>
+                        </select>
+                        <small class="text-muted">
+                            Create a virtual fan device for fan speed control with percentage (0%=Auto, 20-100%=Speeds 1-5). Similar to Home Assistant template fan.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="vane-control" class="form-label">
                             Vane Control
                         </label>
                         <select class="form-select" id="vane-control">
                             <option value="none">None</option>
                             <option value="buttons">Buttons (Auto, Swing)</option>
+                            <option value="fan">Fan Device (Swing)</option>
                         </select>
                         <small class="text-muted">
-                            Control vane/swing position. Buttons are OFF when AC is OFF.
+                            Control vane/swing position. Buttons are switches, Fan Device creates a virtual fan for swing mode.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="swing-control" class="form-label">
+                            Swing Control (Additional)
+                        </label>
+                        <select class="form-select" id="swing-control">
+                            <option value="none">None</option>
+                            <option value="fan">Fan Device</option>
+                        </select>
+                        <small class="text-muted">
+                            Additional swing control. Can be used together with vaneControl=buttons if you want both options.
                         </small>
                     </div>
 
                     <div class="alert alert-warning">
-                        <strong>Note:</strong> Changing button settings will remove/add accessories. You may need to re-assign rooms in the Home app after restart.
+                        <strong>Note:</strong> Changing control settings will remove/add accessories. You may need to re-assign rooms in the Home app after restart.
                     </div>
 
                     <div class="alert alert-info">
@@ -272,7 +299,9 @@
             document.getElementById('debug-mode').addEventListener('change', saveSettings);
             document.getElementById('expose-temperature-sensor').addEventListener('change', saveSettings);
             document.getElementById('fan-speed-buttons').addEventListener('change', saveSettings);
+            document.getElementById('fan-speed-control').addEventListener('change', saveSettings);
             document.getElementById('vane-control').addEventListener('change', saveSettings);
+            document.getElementById('swing-control').addEventListener('change', saveSettings);
         });
 
         // Auto-save settings
@@ -289,7 +318,9 @@
                 config.debug = document.getElementById('debug-mode').checked;
                 config.exposeTemperatureSensor = document.getElementById('expose-temperature-sensor').checked;
                 config.fanSpeedButtons = document.getElementById('fan-speed-buttons').value;
+                config.fanSpeedControl = document.getElementById('fan-speed-control').value;
                 config.vaneControl = document.getElementById('vane-control').value;
+                config.swingControl = document.getElementById('swing-control').value;
 
                 // Remove old deprecated options if they exist
                 delete config.exposeFanSpeedAccessory;
@@ -316,10 +347,12 @@
                     document.getElementById('debug-mode').checked = config.debug || false;
                     document.getElementById('expose-temperature-sensor').checked = config.exposeTemperatureSensor !== false; // Default true
                     document.getElementById('fan-speed-buttons').value = config.fanSpeedButtons || 'none';
+                    document.getElementById('fan-speed-control').value = config.fanSpeedControl || 'none';
                     // Support legacy config migration: vaneButtons "simple" -> vaneControl "buttons"
                     let vaneControl = config.vaneControl || 'none';
                     if (config.vaneButtons === 'simple') vaneControl = 'buttons';
                     document.getElementById('vane-control').value = vaneControl;
+                    document.getElementById('swing-control').value = config.swingControl || 'none';
                     console.log('[UI] Settings loaded:', config);
                 }
             } catch (error) {
