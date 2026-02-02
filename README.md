@@ -17,6 +17,8 @@ So I created this plugin with the help of [Claude Code](https://claude.com/claud
 
 ## Credits
 
+This project is a fork of [homebridge-melcloud-home](https://github.com/eehnsio/homebridge-melcloud-home) by [eehnsio](https://github.com/eehnsio).
+
 Thanks to [homebridge-melcloud-control](https://github.com/grzegorz914/homebridge-melcloud-control) for inspiration on the Homebridge integration patterns.
 
 ## Features
@@ -85,8 +87,35 @@ All settings can be configured through the custom UI - click the Settings (âš™ï¸
 | `refreshInterval` | How often to check device status (seconds). With 30-second polling, changes from the MELCloud app or remote control are picked up quickly. Configurable from 10-3600 seconds. | 30 |
 | `debug` | Enable detailed logging for troubleshooting. Shows all refresh data, API calls, and state changes without requiring Homebridge debug mode. | false |
 | `exposeTemperatureSensor` | Add a separate temperature sensor for each AC unit that can be used in HomeKit automations. | true |
-| `exposeSwingMode` | Show swing toggle in HomeKit for vane oscillation. When enabled, both horizontal and vertical vanes will oscillate. Requires device support. | true |
-| `exposeFanSpeedAccessory` | Show fan speed as a separate Fan tile in HomeKit. Useful for quick access to fan speed control. | false |
+| `fanSpeedButtons` | Create separate switch buttons for fan speed control (none, simple, all). Simple creates Auto/Quiet/Max buttons, All creates Auto/1/2/3/4/5 buttons. Each button shows its speed clearly (e.g. 'Bedroom Fan Auto'). | none |
+| `fanSpeedControl` | Create a virtual fan device for fan speed control. Fan shows Off when AC is off or fan is in Auto mode. Fan speed is controlled via percentage (0%=Auto, 20%=1, 40%=2, 60%=3, 80%=4, 100%=5). Similar to Home Assistant template fan. | none |
+| `vaneControl` | Control vane/swing position (none, buttons, fan). 'buttons' creates separate Auto and Swing switches. 'fan' creates a virtual fan that turns on/off swing mode. | none |
+| `swingControl` | Additional swing control option. Creates a separate virtual fan device for swing control (can be used together with vaneControl=buttons if you want both). | none |
+
+### Fan Speed & Swing Control Options
+
+The plugin offers multiple ways to control fan speed and swing mode:
+
+#### Traditional Buttons (Legacy)
+- `fanSpeedButtons: "simple"` - Creates Auto, Quiet, Max switches
+- `fanSpeedButtons: "all"` - Creates Auto, 1, 2, 3, 4, 5 switches
+- `vaneControl: "buttons"` - Creates Auto and Swing switches
+
+#### Virtual Fan Devices (Recommended)
+- `fanSpeedControl: "fan"` - Creates a virtual fan device for speed control
+  - Fan is **OFF** when AC is off or fan mode is Auto
+  - Fan is **ON** when fan is manually set to speeds 1-5
+  - Speed controlled via percentage: 0%=Auto, 20%=Speed 1, 40%=Speed 2, 60%=Speed 3, 80%=Speed 4, 100%=Speed 5
+  - Turn ON sets fan to max speed (5)
+  - Turn OFF sets fan to Auto
+  
+- `vaneControl: "fan"` or `swingControl: "fan"` - Creates a virtual fan device for swing control
+  - Fan is **OFF** when AC is off or swing mode is not active
+  - Fan is **ON** when swing mode is active
+  - Turn ON activates swing mode
+  - Turn OFF deactivates swing mode (sets to Auto)
+
+**Why virtual fans?** This approach matches Home Assistant's template fan behavior and provides more intuitive control in HomeKit. The fan tiles integrate better with HomeKit automations and scenes compared to individual switches.
 
 ## Changelog
 

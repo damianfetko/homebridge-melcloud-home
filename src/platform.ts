@@ -4,6 +4,8 @@ import { MELCloudAPI, AirToAirUnit } from './melcloud-api';
 import { MELCloudAccessory } from './accessory';
 import { FanSpeedButton } from './fan-speed-button';
 import { VaneButton } from './vane-button';
+import { FanSpeedFan } from './fan-speed-fan';
+import { SwingFan } from './swing-fan';
 import { ConfigManager } from './config-manager';
 
 export class MELCloudHomePlatform implements DynamicPlatformPlugin {
@@ -14,6 +16,8 @@ export class MELCloudHomePlatform implements DynamicPlatformPlugin {
   private readonly accessoryInstances: Map<string, MELCloudAccessory> = new Map();
   private readonly fanButtonInstances: Map<string, FanSpeedButton> = new Map();
   private readonly vaneButtonInstances: Map<string, VaneButton> = new Map();
+  private readonly fanSpeedFanInstances: Map<string, FanSpeedFan> = new Map();
+  private readonly swingFanInstances: Map<string, SwingFan> = new Map();
   private melcloudAPI!: MELCloudAPI;
   private refreshInterval?: NodeJS.Timeout;
   private refreshTimeout?: NodeJS.Timeout;
@@ -174,6 +178,33 @@ export class MELCloudHomePlatform implements DynamicPlatformPlugin {
           }
         }
 
+        // Fan Speed Fan (virtual fan for speed control)
+        const fanSpeedControl = this.config.fanSpeedControl || 'none';
+        if (fanSpeedControl === 'fan' && device.capabilities.numberOfFanSpeeds > 0) {
+          const fanUuid = this.api.hap.uuid.generate(`${device.id}-fan-control`);
+          const existingFan = this.accessories.find(accessory => accessory.UUID === fanUuid);
+
+          if (existingFan) {
+            this.log.info('Restoring Fan Speed control from cache:', device.givenDisplayName);
+            existingFan.context.device = device;
+            this.api.updatePlatformAccessories([existingFan]);
+            const fanInstance = new FanSpeedFan(this, existingFan);
+            this.fanSpeedFanInstances.set(fanUuid, fanInstance);
+          } else {
+            this.log.info('Adding Fan Speed control:', device.givenDisplayName);
+            const fanAccessory = new this.api.platformAccessory(
+              `${device.givenDisplayName} Fan`,
+              fanUuid,
+            );
+            fanAccessory.context.device = device;
+            fanAccessory.context.isFanSpeedFan = true;
+            this.accessories.push(fanAccessory);
+            const fanInstance = new FanSpeedFan(this, fanAccessory);
+            this.fanSpeedFanInstances.set(fanUuid, fanInstance);
+            this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [fanAccessory]);
+          }
+        }
+
         // Vane Buttons (if vaneControl === 'buttons')
         // Also support legacy config: vaneButtons === 'simple'
         const vaneControl = this.config.vaneControl || this.config.vaneButtons || 'none';
@@ -210,14 +241,45 @@ export class MELCloudHomePlatform implements DynamicPlatformPlugin {
             }
           }
         }
+
+        // Swing Fan (virtual fan for swing control)
+        const swingControl = this.config.swingControl || 'none';
+        const enableSwingFan = swingControl === 'fan' || (vaneControl === 'fan');
+        if (enableSwingFan) {
+          const swingUuid = this.api.hap.uuid.generate(`${device.id}-swing-control`);
+          const existingSwing = this.accessories.find(accessory => accessory.UUID === swingUuid);
+
+          if (existingSwing) {
+            this.log.info('Restoring Swing control from cache:', device.givenDisplayName);
+            existingSwing.context.device = device;
+            this.api.updatePlatformAccessories([existingSwing]);
+            const swingInstance = new SwingFan(this, existingSwing);
+            this.swingFanInstances.set(swingUuid, swingInstance);
+          } else {
+            this.log.info('Adding Swing control:', device.givenDisplayName);
+            const swingAccessory = new this.api.platformAccessory(
+              `${device.givenDisplayName} Swing`,
+              swingUuid,
+            );
+            swingAccessory.context.device = device;
+            swingAccessory.context.isSwingFan = true;
+            this.accessories.push(swingAccessory);
+            const swingInstance = new SwingFan(this, swingAccessory);
+            this.swingFanInstances.set(swingUuid, swingInstance);
+            this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [swingAccessory]);
+          }
+        }
       }
 
       // Remove accessories that no longer exist OR are disabled by config
       const devicesIds = devices.map(d => d.id);
       const fanSpeedButtonsConfig = this.config.fanSpeedButtons || 'none';
+      const fanSpeedControlConfig = this.config.fanSpeedControl || 'none';
       // Support new vaneControl and legacy vaneButtons
       const vaneControlConfig = this.config.vaneControl || this.config.vaneButtons || 'none';
       const vaneButtonsEnabled = vaneControlConfig === 'buttons' || vaneControlConfig === 'simple';
+      const swingControlConfig = this.config.swingControl || 'none';
+      const swingFanEnabled = swingControlConfig === 'fan' || vaneControlConfig === 'fan';
 
       const accessoriesToRemove = this.accessories.filter(accessory => {
         const deviceId = accessory.context.device?.id;
@@ -258,9 +320,21 @@ export class MELCloudHomePlatform implements DynamicPlatformPlugin {
           }
         }
 
+        // Remove fan speed fan if fanSpeedControl is not 'fan'
+        if (accessory.context.isFanSpeedFan && fanSpeedControlConfig !== 'fan') {
+          this.log.info('Removing fan speed fan (fanSpeedControl not fan):', accessory.displayName);
+          return true;
+        }
+
         // Remove vane buttons if vaneControl is disabled
         if (accessory.context.isVaneButton && !vaneButtonsEnabled) {
           this.log.info('Removing vane button (vaneControl disabled):', accessory.displayName);
+          return true;
+        }
+
+        // Remove swing fan if swingControl is disabled
+        if (accessory.context.isSwingFan && !swingFanEnabled) {
+          this.log.info('Removing swing fan (swingControl disabled):', accessory.displayName);
           return true;
         }
 
@@ -375,6 +449,30 @@ export class MELCloudHomePlatform implements DynamicPlatformPlugin {
           }
         }
 
+        // Update Fan Speed Fan (if exists)
+        for (const [fanUuid, fanInstance] of this.fanSpeedFanInstances) {
+          if (fanUuid.includes(device.id)) {
+            const fanAccessory = this.accessories.find(acc => acc.UUID === fanUuid);
+            if (fanAccessory) {
+              fanAccessory.context.device = device;
+              this.api.updatePlatformAccessories([fanAccessory]);
+              fanInstance.updateFromDevice(device);
+            }
+          }
+        }
+
+        // Update Swing Fan (if exists)
+        for (const [swingUuid, swingInstance] of this.swingFanInstances) {
+          if (swingUuid.includes(device.id)) {
+            const swingAccessory = this.accessories.find(acc => acc.UUID === swingUuid);
+            if (swingAccessory) {
+              swingAccessory.context.device = device;
+              this.api.updatePlatformAccessories([swingAccessory]);
+              swingInstance.updateFromDevice(device);
+            }
+          }
+        }
+
       }
       this.log.info(`Successfully updated ${updatedCount} of ${devices.length} devices`);
     } catch (error) {
@@ -422,6 +520,30 @@ export class MELCloudHomePlatform implements DynamicPlatformPlugin {
             buttonAccessory.context.device = device;
             this.api.updatePlatformAccessories([buttonAccessory]);
             buttonInstance.updateFromDevice(device);
+          }
+        }
+
+        // Update Fan Speed Fan (if exists)
+        for (const [fanUuid, fanInstance] of this.fanSpeedFanInstances) {
+          if (fanUuid.includes(device.id)) {
+            const fanAccessory = this.accessories.find(acc => acc.UUID === fanUuid);
+            if (fanAccessory) {
+              fanAccessory.context.device = device;
+              this.api.updatePlatformAccessories([fanAccessory]);
+              fanInstance.updateFromDevice(device);
+            }
+          }
+        }
+
+        // Update Swing Fan (if exists)
+        for (const [swingUuid, swingInstance] of this.swingFanInstances) {
+          if (swingUuid.includes(device.id)) {
+            const swingAccessory = this.accessories.find(acc => acc.UUID === swingUuid);
+            if (swingAccessory) {
+              swingAccessory.context.device = device;
+              this.api.updatePlatformAccessories([swingAccessory]);
+              swingInstance.updateFromDevice(device);
+            }
           }
         }
 

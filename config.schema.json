@@ -54,15 +54,36 @@
         ],
         "description": "Create separate switch buttons for fan speed control. Each button shows its speed clearly (e.g. 'Bedroom Fan Auto'). More intuitive than a percentage slider."
       },
+      "fanSpeedControl": {
+        "title": "Fan Speed Control (Virtual Fan)",
+        "type": "string",
+        "default": "none",
+        "oneOf": [
+          { "title": "None", "enum": ["none"] },
+          { "title": "Fan Device", "enum": ["fan"] }
+        ],
+        "description": "Create a virtual fan device for fan speed control. Fan shows Off when AC is off or fan is in Auto mode. Fan speed is controlled via percentage (0%=Auto, 20%=1, 40%=2, 60%=3, 80%=4, 100%=5). This is similar to Home Assistant template fan."
+      },
       "vaneControl": {
         "title": "Vane Control",
         "type": "string",
         "default": "none",
         "oneOf": [
           { "title": "None", "enum": ["none"] },
-          { "title": "Buttons (Auto, Swing)", "enum": ["buttons"] }
+          { "title": "Buttons (Auto, Swing)", "enum": ["buttons"] },
+          { "title": "Fan Device (Swing)", "enum": ["fan"] }
         ],
-        "description": "Control vane/swing position. 'Buttons' creates separate Auto and Swing switches. Buttons are OFF when AC is OFF, and mutually exclusive."
+        "description": "Control vane/swing position. 'Buttons' creates separate Auto and Swing switches. 'Fan Device' creates a virtual fan that turns on/off swing mode. Buttons are OFF when AC is OFF, and mutually exclusive."
+      },
+      "swingControl": {
+        "title": "Swing Control (Additional)",
+        "type": "string",
+        "default": "none",
+        "oneOf": [
+          { "title": "None", "enum": ["none"] },
+          { "title": "Fan Device", "enum": ["fan"] }
+        ],
+        "description": "Additional swing control option. Creates a separate virtual fan device for swing control (can be used together with vaneControl=buttons if you want both)."
       }
     }
   }
