@@ -27,18 +27,23 @@
     "homebridge": "^1.8.0 || ^2.0.0"
   },
   "author": {
-    "name": "Erik Ehnsiö",
-    "email": "e.ehnsio@gmail.com"
+    "name": "Damian Fetko"
   },
+  "contributors": [
+    {
+      "name": "Erik Ehnsiö",
+      "email": "e.ehnsio@gmail.com"
+    }
+  ],
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eehnsio/homebridge-melcloud-home.git"
+    "url": "git+https://github.com/damianfetko/homebridge-melcloud-home-plus.git"
   },
   "bugs": {
-    "url": "https://github.com/eehnsio/homebridge-melcloud-home/issues"
+    "url": "https://github.com/damianfetko/homebridge-melcloud-home-plus/issues"
   },
-  "homepage": "https://github.com/eehnsio/homebridge-melcloud-home#readme",
+  "homepage": "https://github.com/damianfetko/homebridge-melcloud-home-plus#readme",
   "dependencies": {
     "@homebridge/plugin-ui-utils": "^2.1.0"
   },
